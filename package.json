@@ -1,0 +1,45 @@
+{
+  "name": "renpy-image-preview",
+  "publisher": "Boston25",
+  "displayName": "RenPy Image Preview",
+  "description": "Muestra previsualizaciones de imágenes en archivos RenPy",
+  "version": "1.0.0",
+  "engines": {
+    "vscode": "^1.60.0"
+  },
+  "categories": [
+    "Other"
+  ],
+  "activationEvents": [
+    "onLanguage:renpy"
+  ],
+  "main": "./out/extension.js",
+  "contributes": {
+    "languages": [
+      {
+        "id": "renpy",
+        "aliases": [
+          "RenPy",
+          "renpy"
+        ],
+        "extensions": [
+          ".rpy"
+        ],
+        "configuration": "./language-configuration.json"
+      }
+    ]
+  },
+  "scripts": {
+    "vscode:prepublish": "npm run compile",
+    "compile": "tsc -p ./",
+    "watch": "tsc -watch -p ./"
+  },
+  "devDependencies": {
+    "@types/node": "14.x",
+    "@types/vscode": "^1.60.0",
+    "typescript": "^4.4.4"
+  },
+  "dependencies": {
+    "vsce": "^2.15.0"
+  }
+}
