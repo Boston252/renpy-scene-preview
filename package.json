@@ -22,6 +22,16 @@
           "RenPy",
           "renpy"
         ],
+        "commands": [
+        {
+          "command": "renpyImagePreview.openInDefaultViewer",
+          "title": "Abrir imagen con visor del sistema"
+        },
+        {
+          "command": "renpyImagePreview.revealInExplorer",
+          "title": "Mostrar imagen en explorador de archivos"
+        }
+      ],
         "extensions": [
           ".rpy"
         ],

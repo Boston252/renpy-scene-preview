@@ -6,21 +6,28 @@ const path = require("path");
 const fs = require("fs");
 function activate(context) {
     console.log('RenPy Image Preview está activo');
-    // Registrar el proveedor de hover para archivos .rpy
     const provider = new RenPyImageHoverProvider();
-    const disposable = vscode.languages.registerHoverProvider({ language: 'renpy', scheme: 'file' }, provider);
-    context.subscriptions.push(disposable);
+    const hoverDisposable = vscode.languages.registerHoverProvider({ language: 'renpy', scheme: 'file' }, provider);
+    // Comando: Abrir imagen con visor del sistema
+    const openImageCommand = vscode.commands.registerCommand('renpyImagePreview.openInDefaultViewer', (uriString) => {
+        const uri = vscode.Uri.parse(uriString);
+        vscode.env.openExternal(uri);
+    });
+    // Comando: Abrir ubicación en explorador de archivos
+    const revealInExplorerCommand = vscode.commands.registerCommand('renpyImagePreview.revealInExplorer', (uriString) => {
+        const uri = vscode.Uri.parse(uriString);
+        vscode.commands.executeCommand('revealFileInOS', uri);
+    });
+    context.subscriptions.push(hoverDisposable, openImageCommand, revealInExplorerCommand);
 }
 exports.activate = activate;
 class RenPyImageHoverProvider {
     constructor() {
         this.imageExtensions = ['.png', '.jpg', '.jpeg', '.gif', '.bmp', '.webp'];
-        this.imageCache = new Map();
     }
     async provideHover(document, position, token) {
         const line = document.lineAt(position);
         const lineText = line.text;
-        // Buscar patrones de scene en RenPy
         const sceneMatch = this.findScenePattern(lineText, position.character);
         if (!sceneMatch) {
             return undefined;
@@ -30,23 +37,23 @@ class RenPyImageHoverProvider {
         if (!workspaceFolder) {
             return undefined;
         }
-        // Buscar la imagen en el proyecto
         const imagePath = await this.findImageInProject(workspaceFolder.uri.fsPath, imageName);
         if (!imagePath) {
             return new vscode.Hover(new vscode.MarkdownString(`🖼️ **Imagen no encontrada**: \`${imageName}\``));
         }
-        // Crear el hover con la imagen
         const imageUri = vscode.Uri.file(imagePath);
         const relativePath = path.relative(workspaceFolder.uri.fsPath, imagePath);
+        const encodedUri = encodeURIComponent(JSON.stringify(imageUri.toString()));
         const markdown = new vscode.MarkdownString();
         markdown.isTrusted = true;
-        markdown.appendMarkdown(`![${imageName}](${imageUri}|width=300)\n\n`);
-        markdown.appendMarkdown(`**Archivo**: \`${relativePath}\`\n\n`);
+        // Imagen (clicable para abrir con visor del sistema)
+        markdown.appendMarkdown(`[![${imageName}](${imageUri}|width=300)](command:renpyImagePreview.openInDefaultViewer?${encodedUri})\n\n`);
+        // Ruta (clicable para abrir el explorador de archivos)
+        markdown.appendMarkdown(`**Ubicación**: [\`${relativePath}\`](command:renpyImagePreview.revealInExplorer?${encodedUri})\n\n`);
         markdown.appendMarkdown(`**Tamaño**: ${this.getFileSize(imagePath)}`);
         return new vscode.Hover(markdown);
     }
     findScenePattern(lineText, characterPosition) {
-        // Patrones comunes de RenPy para scenes
         const patterns = [
             /scene\s+([a-zA-Z_][a-zA-Z0-9_]*)/g,
             /show\s+([a-zA-Z_][a-zA-Z0-9_]*)/g,
@@ -54,7 +61,7 @@ class RenPyImageHoverProvider {
         ];
         for (const pattern of patterns) {
             let match;
-            pattern.lastIndex = 0; // Reset regex
+            pattern.lastIndex = 0;
             while ((match = pattern.exec(lineText)) !== null) {
                 const start = match.index + match[0].indexOf(match[1]);
                 const end = start + match[1].length;
@@ -70,7 +77,6 @@ class RenPyImageHoverProvider {
         return undefined;
     }
     async findImageInProject(workspacePath, imageName) {
-        // Buscar en directorios comunes de RenPy
         const searchPaths = [
             path.join(workspacePath, 'images'),
             path.join(workspacePath, 'game', 'images'),
@@ -91,7 +97,6 @@ class RenPyImageHoverProvider {
         }
         try {
             const files = fs.readdirSync(dirPath, { withFileTypes: true });
-            // Buscar archivos que coincidan con el nombre
             for (const file of files) {
                 if (file.isFile()) {
                     const fileName = path.parse(file.name).name;
@@ -101,7 +106,6 @@ class RenPyImageHoverProvider {
                     }
                 }
             }
-            // Buscar recursivamente en subdirectorios
             for (const file of files) {
                 if (file.isDirectory()) {
                     const subDirPath = path.join(dirPath, file.name);
